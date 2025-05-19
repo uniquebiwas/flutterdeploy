@@ -38,7 +38,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
 
       - name: Build Android APK
-        run: flutter build apk --release --build-name=$VERSION_NAME --build-number=$VERSION_CODE --split-per-abi
+        run: flutter build apk --release --build-name=${{ env.VERSION_NAME }} --build-number=${{ env.VERSION_CODE }} --split-per-abi
 
       - name: Rename Android APK
         run: |
