@@ -44,6 +44,7 @@ jobs:
         env:
           LANG: en_US.UTF-8
 
+      # Optional iOS build
       # - name: Build iOS IPA (no signing)
       #   run: |
       #     flutter build ios --no-codesign
@@ -62,18 +63,20 @@ jobs:
             --token "${{ secrets.FIREBASE_TOKEN }}" \
             --testers "biwas@nexdigitalstudio.com"
 
-      # - name: Distribute iOS IPA to Firebase (optional)
+      # - name: Distribute iOS IPA to Firebase
       #   run: |
       #     firebase appdistribution:distribute build/ios/iphoneos/appname-${{ github.ref_name }}.ipa \
       #       --app 1:427445952125:ios:f3b80f773ddc438d149b14 \
       #       --token "${{ secrets.FIREBASE_TOKEN }}" \
-      #       --testers "email1@example.com,email2@example.com"
+      #       --testers "..."
+
       - name: Install Sentry CLI
         run: curl -sL https://sentry.io/get-cli/ | bash
 
       - name: Upload to Sentry (Android symbols)
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_TOKEN }}
         run: |
-          export SENTRY_TOKEN=${{ secrets.SENTRY_TOKEN }}
           export SENTRY_ORG=nex-digital-studio
           export SENTRY_PROJECT=flutter
           export SENTRY_RELEASE=${{ github.ref_name }}
