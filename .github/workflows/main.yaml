@@ -91,4 +91,4 @@ jobs:
           artifacts: |
             build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
           tag: ${{ github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TOKEN }}
