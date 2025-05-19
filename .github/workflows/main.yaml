@@ -32,9 +32,10 @@ jobs:
       - name: Set version info
         id: vars
         run: |
-          VERSION_NAME=${{ github.ref_name }}
+          VERSION_NAME="${GITHUB_REF_NAME#v}"
+          VERSION_CODE=$(git tag | grep '^v' | wc -l)
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
-          echo "VERSION_CODE=$$VERSION_NAME >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
 
       - name: Build Android APK
         run: flutter build apk --release --build-name=$VERSION_NAME --build-number=$VERSION_CODE --split-per-abi
