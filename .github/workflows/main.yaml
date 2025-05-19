@@ -33,7 +33,7 @@ jobs:
         id: vars
         run: |
           VERSION_NAME="${GITHUB_REF_NAME#v}"
-          VERSION_CODE=$(git tag | grep '^v' | wc -l)
+          VERSION_CODE=$(git tag | grep '^v' | wc -l | xargs)
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
 
