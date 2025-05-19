@@ -29,8 +29,16 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
+      - name: Set version info
+        id: vars
+        run: |
+          VERSION_NAME="${GITHUB_REF_NAME#v}"  # strip leading 'v'
+          VERSION_CODE=$(date +%Y%m%d%H%M)
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+
       - name: Build Android APK
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --build-name=$VERSION_NAME --build-number=$VERSION_CODE --split-per-abi
 
       - name: Rename Android APK
         run: |
@@ -44,7 +52,7 @@ jobs:
         env:
           LANG: en_US.UTF-8
 
-      # Optional iOS build
+      # Optional iOS build (no signing)
       # - name: Build iOS IPA (no signing)
       #   run: |
       #     flutter build ios --no-codesign
