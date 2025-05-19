@@ -44,13 +44,13 @@ jobs:
         env:
           LANG: en_US.UTF-8
 
-      - name: Build iOS IPA (no signing)
-        run: |
-          flutter build ios --no-codesign
-          cd build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload/
-          zip -r appname-${{ github.ref_name }}.ipa Payload
+      # - name: Build iOS IPA (no signing)
+      #   run: |
+      #     flutter build ios --no-codesign
+      #     cd build/ios/iphoneos
+      #     mkdir -p Payload
+      #     cp -r Runner.app Payload/
+      #     zip -r appname-${{ github.ref_name }}.ipa Payload
 
       - name: Install Firebase CLI
         run: curl -sL https://firebase.tools | bash
