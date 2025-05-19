@@ -1,0 +1,92 @@
+name: "Tagged Release Build"
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tag push like v1.0.0
+
+jobs:
+  build:
+    name: Build & Distribute
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release --split-per-abi
+
+      - name: Rename Android APK
+        run: |
+          mv build/app/outputs/apk/release/app-armeabi-v7a-release.apk \
+             build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+        env:
+          LANG: en_US.UTF-8
+
+      - name: Build iOS IPA (no signing)
+        run: |
+          flutter build ios --no-codesign
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r appname-${{ github.ref_name }}.ipa Payload
+
+      - name: Install Firebase CLI
+        run: curl -sL https://firebase.tools | bash
+
+      - name: Distribute Android APK to Firebase
+        run: |
+          firebase appdistribution:distribute build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk \
+            --app 1:427445952125:android:7761a2707cbef894149b14 \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
+            --testers "bwias@nexdigitalstudio.com,email2@example.com"
+
+      # - name: Distribute iOS IPA to Firebase (optional)
+      #   run: |
+      #     firebase appdistribution:distribute build/ios/iphoneos/appname-${{ github.ref_name }}.ipa \
+      #       --app 1:427445952125:ios:f3b80f773ddc438d149b14 \
+      #       --token "${{ secrets.FIREBASE_TOKEN }}" \
+      #       --testers "email1@example.com,email2@example.com"
+      - name: Install Sentry CLI
+        run: curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Upload to Sentry (Android symbols)
+        run: |
+          export SENTRY_TOKEN=${{ secrets.SENTRY_TOKEN }}
+          export SENTRY_ORG=nex-digital-studio
+          export SENTRY_PROJECT=flutter
+          export SENTRY_RELEASE=${{ github.ref_name }}
+
+          sentry-cli releases new "$SENTRY_RELEASE"
+          sentry-cli releases files "$SENTRY_RELEASE" upload-sourcemaps build/
+          sentry-cli releases finalize "$SENTRY_RELEASE"
+
+      - name: Upload to GitHub Releases
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
+            build/ios/iphoneos/appname-${{ github.ref_name }}.ipa
+          tag: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
