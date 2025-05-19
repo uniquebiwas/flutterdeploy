@@ -29,7 +29,14 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Set version info
+      - name: Validate Version Tag
+        run: |
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag format. Must be v<MAJOR>.<MINOR>.<PATCH>"
+            exit 1
+          fi
+
+      - name: Set Version Info
         id: vars
         run: |
           VERSION_NAME="${GITHUB_REF_NAME#v}"
@@ -37,13 +44,17 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
 
-      - name: Build Android APK
-        run: flutter build apk --release --build-name=${{ env.VERSION_NAME }} --build-number=${{ env.VERSION_CODE }} --split-per-abi
+      - name: Build Android APK (split per ABI)
+        run: flutter build apk --release --split-per-abi --build-name="${{ env.VERSION_NAME }}" --build-number="${{ env.VERSION_CODE }}"
 
-      - name: Rename Android APK
+      - name: Rename Android APKs
         run: |
-          mv build/app/outputs/apk/release/app-armeabi-v7a-release.apk \
-             build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
+          mv build/app/outputs/apk/release/app-armeabi-v7a-release.apk build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
+          mv build/app/outputs/apk/release/app-arm64-v8a-release.apk build/app/outputs/apk/release/appname-${{ github.ref_name }}-arm64-v8a.apk
+          mv build/app/outputs/apk/release/app-x86_64-release.apk build/app/outputs/apk/release/appname-${{ github.ref_name }}-x86_64.apk
+
+      - name: Verify APK Exists
+        run: test -f build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
 
       - name: Install CocoaPods
         run: |
@@ -64,12 +75,14 @@ jobs:
       - name: Install Firebase CLI
         run: curl -sL https://firebase.tools | bash
 
-      - name: Distribute Android APK to Firebase
+      - name: Distribute Android APKs to Firebase
         run: |
-          firebase appdistribution:distribute build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk \
-            --app 1:427445952125:android:7761a2707cbef894149b14 \
-            --token "${{ secrets.FIREBASE_TOKEN }}" \
-            --testers "biwas@nexdigitalstudio.com"
+          for apk in build/app/outputs/apk/release/appname-${{ github.ref_name }}-*.apk; do
+            firebase appdistribution:distribute "$apk" \
+              --app 1:427445952125:android:7761a2707cbef894149b14 \
+              --token "${{ secrets.FIREBASE_TOKEN }}" \
+              --testers "biwas@nexdigitalstudio.com"
+          done
 
       # - name: Distribute iOS IPA to Firebase
       #   run: |
@@ -98,5 +111,10 @@ jobs:
         with:
           artifacts: |
             build/app/outputs/apk/release/appname-${{ github.ref_name }}-armeabi-v7a.apk
+            build/app/outputs/apk/release/appname-${{ github.ref_name }}-arm64-v8a.apk
+            build/app/outputs/apk/release/appname-${{ github.ref_name }}-x86_64.apk
           tag: ${{ github.ref_name }}
           token: ${{ secrets.TOKEN }}
+          body: |
+            🚀 Release ${{ github.ref_name }}  
+            Automatically generated on tag push.
